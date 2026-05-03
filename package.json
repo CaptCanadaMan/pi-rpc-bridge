@@ -1,0 +1,60 @@
+{
+	"name": "pi-rpc-bridge",
+	"version": "0.0.0",
+	"description": "HTTP + WebSocket bridge for pi --mode rpc — drive the pi coding agent remotely over a configurable network layer",
+	"type": "module",
+	"main": "dist/index.js",
+	"bin": {
+		"pi-rpc-bridge": "dist/index.js"
+	},
+	"scripts": {
+		"build": "tsc",
+		"dev": "tsc --watch",
+		"check": "tsc --noEmit",
+		"test": "vitest --run",
+		"format": "biome format --write .",
+		"lint": "biome lint .",
+		"prepublishOnly": "npm run check && npm run build"
+	},
+	"keywords": [
+		"pi",
+		"pi-mono",
+		"coding-agent",
+		"rpc",
+		"http",
+		"websocket",
+		"bridge",
+		"remote"
+	],
+	"author": "CaptCanadaMan (https://github.com/CaptCanadaMan)",
+	"contributors": [
+		"Claude (Anthropic) <noreply@anthropic.com> (https://claude.com/claude-code)"
+	],
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/CaptCanadaMan/pi-rpc-bridge.git"
+	},
+	"bugs": {
+		"url": "https://github.com/CaptCanadaMan/pi-rpc-bridge/issues"
+	},
+	"homepage": "https://github.com/CaptCanadaMan/pi-rpc-bridge#readme",
+	"files": [
+		"dist/",
+		"LICENSE",
+		"README.md"
+	],
+	"engines": {
+		"node": ">=20.6.0"
+	},
+	"dependencies": {
+		"ws": "^8.18.0"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.0.0",
+		"@types/node": "^22.10.5",
+		"@types/ws": "^8.5.13",
+		"typescript": "^5.7.0",
+		"vitest": "^3.0.0"
+	}
+}
