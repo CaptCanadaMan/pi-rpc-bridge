@@ -1,14 +1,73 @@
 // Bearer token validation.
 //
-// Real implementation will:
-//   - load expected token from config (see config.ts)
-//   - validate Authorization header for REST (`Bearer <token>`)
-//   - validate Sec-WebSocket-Protocol header for WS handshake
-//   - constant-time compare to defeat timing side-channels
-//   - fail-closed with 401 on missing / malformed / wrong token
-//   - log auth failures with source IP (no token material in logs)
+// Two surfaces:
+//   - REST: `Authorization: Bearer <token>` header
+//   - WS:   bearer token sent via `Sec-WebSocket-Protocol: bearer.<token>` subprotocol
 //
-// Forward-compat: future "trusted-proxy" mode will accept pre-authenticated
-// requests via X-Forwarded-User from a configured upstream IP. Not in v1.
+// Why subprotocol for WS: browsers and the iOS WebSocket API can pass an array
+// of subprotocols at handshake but cannot set arbitrary headers. The
+// subprotocol slot is the canonical way to ferry an opaque token through to
+// the server during the upgrade. We don't use the subprotocol for actual
+// protocol negotiation, so this is just a transport for the credential.
+//
+// Constant-time compare on both surfaces. Fail-closed with a generic 401 — no
+// hint in the response body about what was wrong.
 
-export {};
+import { timingSafeEqual } from "node:crypto";
+import type { IncomingMessage } from "node:http";
+
+export type AuthResult = { ok: true } | { ok: false; reason: string };
+
+export interface Auth {
+	validateRest(req: IncomingMessage): AuthResult;
+	validateWs(req: IncomingMessage): AuthResult;
+}
+
+export const WS_SUBPROTOCOL_PREFIX = "bearer.";
+
+export function createAuth(expectedToken: string): Auth {
+	const expected = Buffer.from(expectedToken, "utf8");
+
+	function compare(provided: string): boolean {
+		const actual = Buffer.from(provided, "utf8");
+		if (actual.length !== expected.length) return false;
+		return timingSafeEqual(actual, expected);
+	}
+
+	return {
+		validateRest(req) {
+			const header = req.headers.authorization;
+			if (typeof header !== "string") {
+				return { ok: false, reason: "missing Authorization header" };
+			}
+			const match = /^Bearer (.+)$/.exec(header);
+			if (!match) {
+				return { ok: false, reason: "Authorization must be 'Bearer <token>'" };
+			}
+			if (!compare(match[1])) {
+				return { ok: false, reason: "invalid bearer token" };
+			}
+			return { ok: true };
+		},
+
+		validateWs(req) {
+			const header = req.headers["sec-websocket-protocol"];
+			if (typeof header !== "string") {
+				return { ok: false, reason: "missing Sec-WebSocket-Protocol header" };
+			}
+			const protocols = header
+				.split(",")
+				.map((s) => s.trim())
+				.filter(Boolean);
+			const tokenProto = protocols.find((p) => p.startsWith(WS_SUBPROTOCOL_PREFIX));
+			if (!tokenProto) {
+				return { ok: false, reason: `no ${WS_SUBPROTOCOL_PREFIX}<token> subprotocol` };
+			}
+			const token = tokenProto.slice(WS_SUBPROTOCOL_PREFIX.length);
+			if (!compare(token)) {
+				return { ok: false, reason: "invalid bearer token" };
+			}
+			return { ok: true };
+		},
+	};
+}

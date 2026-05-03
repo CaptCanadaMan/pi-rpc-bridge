@@ -8,12 +8,14 @@
 		"pi-rpc-bridge": "dist/index.js"
 	},
 	"scripts": {
-		"build": "tsc",
-		"dev": "tsc --watch",
+		"build": "tsc -p tsconfig.build.json",
+		"dev": "tsc -p tsconfig.build.json --watch",
 		"check": "tsc --noEmit",
 		"test": "vitest --run",
 		"format": "biome format --write .",
 		"lint": "biome lint .",
+		"start": "npm run build --silent && node dist/index.js",
+		"ws-client": "npm run build --silent && node dist/ws-client.js",
 		"prepublishOnly": "npm run check && npm run build"
 	},
 	"keywords": [

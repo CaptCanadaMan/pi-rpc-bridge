@@ -16,8 +16,8 @@
 		"sourceMap": true,
 		"inlineSources": true,
 		"outDir": "dist",
-		"rootDir": "src"
+		"rootDir": "."
 	},
-	"include": ["src/**/*.ts"],
-	"exclude": ["node_modules", "dist", "**/*.test.ts", "pi-mono source reference", "pi-ollama COPY"]
+	"include": ["src/**/*.ts", "test/**/*.ts"],
+	"exclude": ["node_modules", "dist", "pi-mono source reference", "pi-ollama COPY"]
 }

@@ -30,6 +30,7 @@ spike/
 # Internal session context — not for the public repo
 CLAUDE.md
 *.spec.md
+SPIKE.md
 
 # Reference snapshots — large directories not for the public repo
 pi-mono source reference/

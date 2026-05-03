@@ -1,20 +1,25 @@
-// REST route dispatcher.
+// Route table + dispatcher.
 //
-// Hand-rolled regex dispatcher table — no router library. The full v1 endpoint
-// set is small (see CLAUDE.md §Bridge architecture):
-//
-//   POST /api/sessions
-//   GET  /api/sessions
-//   GET  /api/sessions/:id/state
-//   GET  /api/sessions/:id/messages
-//   POST /api/sessions/:id/prompt
-//   POST /api/sessions/:id/steer
-//   POST /api/sessions/:id/follow_up
-//   POST /api/sessions/:id/abort
-//   POST /api/sessions/:id/model
-//   POST /api/sessions/:id/compact
-//   POST /api/sessions/:id/bash
-//   GET  /api/models
-//   GET  /api/commands
+// We don't use a router library. The endpoint set is small (~25 paths, all
+// static for v1 — no path parameters), so an exact-match table is sufficient
+// and fully testable in isolation.
 
-export {};
+import type { IncomingMessage, ServerResponse } from "node:http";
+
+export type RouteHandler = (req: IncomingMessage, res: ServerResponse) => Promise<void>;
+
+export interface Route {
+	method: string;
+	path: string;
+	handler: RouteHandler;
+}
+
+/** Find a route matching method + pathname. Returns null on miss. */
+export function findRoute(routes: ReadonlyArray<Route>, method: string, pathname: string): Route | null {
+	for (const r of routes) {
+		if (r.method === method && r.path === pathname) {
+			return r;
+		}
+	}
+	return null;
+}
