@@ -16,6 +16,7 @@
 		"lint": "biome lint .",
 		"start": "npm run build --silent && node dist/index.js",
 		"ws-client": "npm run build --silent && node dist/ws-client.js",
+		"test-tier2": "tsx test/integration/tier2.ts",
 		"prepublishOnly": "npm run check && npm run build"
 	},
 	"keywords": [
@@ -56,6 +57,7 @@
 		"@biomejs/biome": "^2.0.0",
 		"@types/node": "^22.10.5",
 		"@types/ws": "^8.5.13",
+		"tsx": "^4.20.0",
 		"typescript": "^5.7.0",
 		"vitest": "^3.0.0"
 	}
