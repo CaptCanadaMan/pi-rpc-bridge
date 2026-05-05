@@ -39,7 +39,7 @@ pi-rpc-bridge fills a narrower niche, guided by three principles:
 ## Quick start (Tier 1 — Tailscale)
 
 Five minutes to a working remote pi. Requires:
-- A homelab machine with `pi` installed (`npm install -g @mariozechner/pi-coding-agent`) and a configured provider.
+- A homelab machine with `pi` installed and a configured provider. Verify with `pi --version`.
 - Tailscale on the homelab and on whatever client you'll drive it from.
 - This repo cloned and built.
 
@@ -50,10 +50,10 @@ cd pi-rpc-bridge
 npm install
 npm run build
 
-# 2. Generate a bearer token
+# 2. Generate a bearer token. The umask makes sure the file is created with
+#    mode 600 from the start (no brief window where it's world-readable).
 mkdir -p ~/.config/pi-rpc-bridge
-openssl rand -hex 32 > ~/.config/pi-rpc-bridge/token
-chmod 600 ~/.config/pi-rpc-bridge/token
+( umask 077 && openssl rand -hex 32 > ~/.config/pi-rpc-bridge/token )
 
 # 3. Find your Tailscale IP on the bridge host
 tailscale ip -4    # e.g. 100.64.0.5
@@ -64,6 +64,8 @@ PI_RPC_BRIDGE_BEARER_TOKEN=$(cat ~/.config/pi-rpc-bridge/token) \
 PI_RPC_BRIDGE_CWD=$HOME/code/your-project \
 node dist/index.js
 ```
+
+If pi isn't installed yet: `npm install -g @mariozechner/pi-coding-agent`, then set up a provider per the [pi-mono README](https://github.com/badlogic/pi-mono#quick-start).
 
 You should see:
 ```
@@ -171,7 +173,7 @@ The bridge is the trust boundary, not anything inside it. Authenticated clients 
 
 - **Bearer-token auth** with constant-time compare (`crypto.timingSafeEqual`) on REST and WS handshake.
 - **No cookie-based auth.** CSRF via `Authorization: Bearer ...` is impossible because browsers don't auto-attach `Authorization` headers cross-origin.
-- **Optional `Origin` allowlist** (`PI_RPC_BRIDGE_ALLOWED_ORIGINS`) for defense-in-depth against browser-based CSRF. When set, browser clients must present a matching `Origin` header. Non-browser clients (iOS, curl, our `ws-client`) don't send `Origin` and are unaffected.
+- **Optional `Origin` allowlist** (`PI_RPC_BRIDGE_ALLOWED_ORIGINS`) for defense-in-depth against browser-based CSRF. When set, browser clients must present a matching `Origin` header. Non-browser clients (iOS, curl, our `ws-client`) don't send `Origin` and are unaffected. Exact-match only — subdomain wildcards (`https://*.example.com`) are not supported; list each origin explicitly.
 - **Fail-closed 401 with no detail** in the response body. Full reason is logged server-side with source IP for tripwire detection.
 - **Process args via array** (`child_process.spawn(binary, [args])` — no shell interpretation, immune to argument injection).
 - **Strict JSONL framing** on the bridge↔pi pipe (see `src/jsonl.ts`); malformed bytes from pi are dropped, not interpreted.
@@ -331,6 +333,8 @@ For SMB or team deployments where you want SSO integration, audit, and centraliz
 
 The bridge is meant to run continuously. The supervisor inside `index.ts` will auto-restart pi if it exits unexpectedly, but you'll want OS-level supervision for the bridge itself.
 
+Both templates below use `/usr/local/bin/node` and `/usr/bin/node` as placeholders. **Replace these with the output of `which node` on your bridge host** — Apple Silicon Homebrew installs to `/opt/homebrew/bin/node`, nvm to `~/.nvm/versions/node/*/bin/node`, etc. Replace `/path/to/pi-rpc-bridge` with the actual clone location, and the `com.captcanadaman.*` label / `you` username with your own identifiers.
+
 ### macOS (launchd)
 
 `~/Library/LaunchAgents/com.captcanadaman.pi-rpc-bridge.plist`:
@@ -405,6 +409,89 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now pi-rpc-bridge
 journalctl -fu pi-rpc-bridge   # tail logs
 ```
+
+---
+
+## Uninstall
+
+Stop the daemon (if you set one up), then remove the source tree, config, tokens, and logs. Pick the recipes that match how you installed.
+
+### Stop the daemon
+
+**macOS (launchd):**
+```bash
+launchctl unload ~/Library/LaunchAgents/com.captcanadaman.pi-rpc-bridge.plist
+rm ~/Library/LaunchAgents/com.captcanadaman.pi-rpc-bridge.plist
+```
+
+**Linux (systemd):**
+```bash
+sudo systemctl disable --now pi-rpc-bridge
+sudo rm /etc/systemd/system/pi-rpc-bridge.service
+sudo rm -rf /etc/pi-rpc-bridge
+sudo systemctl daemon-reload
+```
+
+### Remove source, config, tokens, and logs
+
+```bash
+# Source clone
+rm -rf /path/to/pi-rpc-bridge
+
+# Config + bearer token
+rm -rf ~/.config/pi-rpc-bridge
+
+# macOS log files (only if you used the default StandardOutPath/StandardErrorPath)
+rm -f ~/Library/Logs/pi-rpc-bridge.log ~/Library/Logs/pi-rpc-bridge.err.log
+```
+
+### When published to npm (future)
+
+If you installed via npm:
+```bash
+npm uninstall -g pi-rpc-bridge
+```
+
+### Important: this is **not** a pi extension
+
+`pi-rpc-bridge` runs as a separate Node service that *spawns* pi as a subprocess. It is not installed via `pi install` and is not registered as a pi extension. **`pi uninstall pi-rpc-bridge` will not do anything useful** — pi has no record of the bridge ever existing. Use the recipes above.
+
+---
+
+## Troubleshooting
+
+### `pi: command not found` on bridge startup
+Pi isn't on `PATH` for the user running the bridge.
+- Verify: `which pi && pi --version`
+- Install if missing: `npm install -g @mariozechner/pi-coding-agent`
+- Or set `PI_RPC_BRIDGE_PI_BIN=/full/path/to/pi` if pi is installed elsewhere
+
+### `Bearer token must be at least 32 characters`
+Your token is too short. Regenerate: `openssl rand -hex 32` produces 64 hex characters (256 bits).
+
+### `Config file at X has overly-permissive mode`
+The bridge refuses to load a config file readable by group or other (security: it contains your bearer token). Fix:
+```bash
+chmod 600 ~/.config/pi-rpc-bridge/config.json
+```
+
+### `pi working directory is required`
+Set `PI_RPC_BRIDGE_CWD` to the directory pi should run in. The agent's tools (Read, Edit, Bash) operate relative to this path.
+
+### Bridge starts but `POST /api/prompt` returns 503
+Pi crashed or is restarting. The bridge auto-restarts pi after `restartBackoffMs` (default 2s); retry after a few seconds. Check the bridge's stderr — it tees pi's stderr inline (`[pi] ...` prefix). Common causes: pi misconfigured (no provider/model set), provider unreachable (Ollama not running, etc.).
+
+### Bridge listening but clients can't connect
+- Bind host: by default the bridge listens only on `127.0.0.1`. Set `PI_RPC_BRIDGE_BIND_HOST` to your overlay IP (e.g. Tailscale IP) for remote access.
+- Firewall: confirm the bind port is reachable from the client's network.
+
+### Auth always fails with 401
+- Token mismatch: confirm the value you're sending matches what the bridge has loaded. Tokens drift after a config rotation; restart the bridge after editing.
+- WebSocket: the token goes in `Sec-WebSocket-Protocol: bearer.<token>`, not `Authorization`. Most WebSocket libraries take an array of subprotocols at connect time.
+- Origin: if you set `PI_RPC_BRIDGE_ALLOWED_ORIGINS`, browser clients must send a matching `Origin` header. Subdomain wildcards aren't supported.
+
+### Bridge restarts pi every few seconds in a loop
+Pi keeps crashing on startup. Run `pi --mode rpc` directly in the bridge's `cwd` to see why. Most common: missing provider config, missing API key in env.
 
 ---
 

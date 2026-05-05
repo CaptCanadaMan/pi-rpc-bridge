@@ -39,6 +39,12 @@ export interface Config {
 		pingIntervalMs: number;
 		extensionRequestTtlMs: number;
 	};
+	/**
+	 * Log verbosity. Currently parsed and surfaced in the boot banner but not
+	 * yet wired through to a structured logger — `console.error` is unfiltered
+	 * everywhere. Kept as a forward-compatible config knob; structured logging
+	 * with level filtering is on the v0.x roadmap.
+	 */
 	logLevel: "debug" | "info" | "warn" | "error";
 }
 
