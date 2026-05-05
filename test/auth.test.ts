@@ -67,3 +67,74 @@ describe("createAuth.validateWs", () => {
 		expect(result.ok).toBe(false);
 	});
 });
+
+describe("createAuth — origin allowlist (REST)", () => {
+	const auth = createAuth(TOKEN, ["https://app.example.com", "https://admin.example.com"]);
+
+	it("accepts when no Origin header is present (non-browser client)", () => {
+		expect(auth.validateRest(makeReq({ authorization: `Bearer ${TOKEN}` })).ok).toBe(true);
+	});
+
+	it("accepts when Origin matches an entry in the allowlist", () => {
+		expect(
+			auth.validateRest(
+				makeReq({ authorization: `Bearer ${TOKEN}`, origin: "https://app.example.com" }),
+			).ok,
+		).toBe(true);
+	});
+
+	it("rejects when Origin is not in the allowlist", () => {
+		const result = auth.validateRest(
+			makeReq({ authorization: `Bearer ${TOKEN}`, origin: "https://evil.example.com" }),
+		);
+		expect(result.ok).toBe(false);
+	});
+
+	it("rejects on Origin mismatch even if token is valid (Origin checked first)", () => {
+		const result = auth.validateRest(
+			makeReq({ authorization: `Bearer ${TOKEN}`, origin: "https://evil.example.com" }),
+		);
+		expect(result).toEqual({ ok: false, reason: expect.stringContaining("evil.example.com") });
+	});
+});
+
+describe("createAuth — origin allowlist (WS)", () => {
+	const auth = createAuth(TOKEN, ["https://app.example.com"]);
+
+	it("accepts when no Origin header is present", () => {
+		expect(auth.validateWs(makeReq({ "sec-websocket-protocol": `bearer.${TOKEN}` })).ok).toBe(true);
+	});
+
+	it("accepts when Origin matches", () => {
+		expect(
+			auth.validateWs(
+				makeReq({
+					"sec-websocket-protocol": `bearer.${TOKEN}`,
+					origin: "https://app.example.com",
+				}),
+			).ok,
+		).toBe(true);
+	});
+
+	it("rejects when Origin is not in the allowlist", () => {
+		const result = auth.validateWs(
+			makeReq({
+				"sec-websocket-protocol": `bearer.${TOKEN}`,
+				origin: "https://evil.example.com",
+			}),
+		);
+		expect(result.ok).toBe(false);
+	});
+});
+
+describe("createAuth — empty origin allowlist behaves as none", () => {
+	const auth = createAuth(TOKEN, []);
+
+	it("accepts any Origin when allowlist is empty array", () => {
+		expect(
+			auth.validateRest(
+				makeReq({ authorization: `Bearer ${TOKEN}`, origin: "https://anywhere.example.com" }),
+			).ok,
+		).toBe(true);
+	});
+});

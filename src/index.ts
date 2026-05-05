@@ -28,7 +28,7 @@ async function main(): Promise<void> {
 	const config = loadConfig();
 	logBootBanner(config);
 
-	const auth = createAuth(config.bearerToken);
+	const auth = createAuth(config.bearerToken, config.allowedOrigins);
 
 	const piClient = new PiClient({
 		binary: config.pi.binary,
@@ -84,6 +84,11 @@ function logBootBanner(config: Config): void {
 	console.error(`[pi-rpc-bridge] pi binary: ${config.pi.binary}`);
 	console.error(`[pi-rpc-bridge] pi cwd:    ${config.pi.cwd}`);
 	console.error(`[pi-rpc-bridge] log level: ${config.logLevel}`);
+	if (config.allowedOrigins && config.allowedOrigins.length > 0) {
+		console.error(`[pi-rpc-bridge] origin allowlist: ${config.allowedOrigins.join(", ")}`);
+	} else {
+		console.error("[pi-rpc-bridge] origin allowlist: (none — Origin header not validated)");
+	}
 	// Token never printed.
 }
 

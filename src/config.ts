@@ -19,6 +19,15 @@ export interface Config {
 	bindHost: string;
 	bindPort: number;
 	bearerToken: string;
+	/**
+	 * Allowlist of Origin header values for cross-origin protection.
+	 * - Undefined or empty: no Origin validation (current behavior).
+	 * - Non-empty: requests with an Origin header must match one in the list.
+	 *   Requests without an Origin header (typical for non-browser clients
+	 *   like iOS, curl, ws-client) always pass — browsers always set Origin
+	 *   on cross-origin requests, so absence implies a non-browser client.
+	 */
+	allowedOrigins?: string[];
 	pi: {
 		cwd: string;
 		binary: string;
@@ -37,6 +46,7 @@ interface FileConfig {
 	bindHost?: string;
 	bindPort?: number;
 	bearerToken?: string;
+	allowedOrigins?: string[];
 	pi?: {
 		cwd?: string;
 		binary?: string;
@@ -100,6 +110,15 @@ function envInt(name: string): number | undefined {
 	return n;
 }
 
+function envStringArray(name: string): string[] | undefined {
+	const raw = process.env[name];
+	if (raw === undefined || raw === "") return undefined;
+	return raw
+		.split(",")
+		.map((s) => s.trim())
+		.filter(Boolean);
+}
+
 function requireString(value: string | undefined, source: string, advice: string): string {
 	if (!value) {
 		throw new Error(`${source} is required. ${advice}`);
@@ -140,6 +159,7 @@ export function loadConfig(): Config {
 		bindHost: process.env.PI_RPC_BRIDGE_BIND_HOST ?? file.bindHost ?? "127.0.0.1",
 		bindPort: envInt("PI_RPC_BRIDGE_BIND_PORT") ?? file.bindPort ?? 8787,
 		bearerToken,
+		allowedOrigins: envStringArray("PI_RPC_BRIDGE_ALLOWED_ORIGINS") ?? file.allowedOrigins,
 		pi: {
 			cwd: piCwd,
 			binary: process.env.PI_RPC_BRIDGE_PI_BIN ?? file.pi?.binary ?? "pi",

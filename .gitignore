@@ -31,6 +31,7 @@ spike/
 CLAUDE.md
 *.spec.md
 SPIKE.md
+IOS_HANDOFF.md
 
 # Reference snapshots — large directories not for the public repo
 pi-mono source reference/

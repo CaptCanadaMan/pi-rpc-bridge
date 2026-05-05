@@ -1,4 +1,4 @@
-// Bearer token validation.
+// Bearer token + Origin validation.
 //
 // Two surfaces:
 //   - REST: `Authorization: Bearer <token>` header
@@ -12,6 +12,13 @@
 //
 // Constant-time compare on both surfaces. Fail-closed with a generic 401 — no
 // hint in the response body about what was wrong.
+//
+// Optional Origin allowlist (defense in depth against browser-based CSRF):
+//   - When `allowedOrigins` is undefined/empty, no Origin validation.
+//   - When set, requests carrying an Origin header must match one in the list.
+//   - Requests without an Origin header always pass — browsers always send
+//     Origin on cross-origin WebSocket / fetch, so absence implies a
+//     non-browser client (iOS, curl, server-side, etc.).
 
 import { timingSafeEqual } from "node:crypto";
 import type { IncomingMessage } from "node:http";
@@ -25,8 +32,9 @@ export interface Auth {
 
 export const WS_SUBPROTOCOL_PREFIX = "bearer.";
 
-export function createAuth(expectedToken: string): Auth {
+export function createAuth(expectedToken: string, allowedOrigins?: ReadonlyArray<string>): Auth {
 	const expected = Buffer.from(expectedToken, "utf8");
+	const originAllowlist = allowedOrigins && allowedOrigins.length > 0 ? allowedOrigins : undefined;
 
 	function compare(provided: string): boolean {
 		const actual = Buffer.from(provided, "utf8");
@@ -34,8 +42,21 @@ export function createAuth(expectedToken: string): Auth {
 		return timingSafeEqual(actual, expected);
 	}
 
+	function checkOrigin(req: IncomingMessage): AuthResult {
+		if (!originAllowlist) return { ok: true };
+		const origin = req.headers.origin;
+		if (typeof origin !== "string") return { ok: true };
+		if (!originAllowlist.includes(origin)) {
+			return { ok: false, reason: `origin '${origin}' not in allowlist` };
+		}
+		return { ok: true };
+	}
+
 	return {
 		validateRest(req) {
+			const originResult = checkOrigin(req);
+			if (!originResult.ok) return originResult;
+
 			const header = req.headers.authorization;
 			if (typeof header !== "string") {
 				return { ok: false, reason: "missing Authorization header" };
@@ -51,6 +72,9 @@ export function createAuth(expectedToken: string): Auth {
 		},
 
 		validateWs(req) {
+			const originResult = checkOrigin(req);
+			if (!originResult.ok) return originResult;
+
 			const header = req.headers["sec-websocket-protocol"];
 			if (typeof header !== "string") {
 				return { ok: false, reason: "missing Sec-WebSocket-Protocol header" };
