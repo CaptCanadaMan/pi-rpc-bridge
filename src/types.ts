@@ -1,6 +1,6 @@
 // Protocol types — subset of pi-mono's `rpc-types.ts` that the bridge actually touches.
 //
-// Source reference: https://github.com/badlogic/pi-mono/blob/main/packages/coding-agent/src/modes/rpc/rpc-types.ts
+// Source reference: https://github.com/earendil-works/pi-mono/blob/main/packages/coding-agent/src/modes/rpc/rpc-types.ts
 //
 // We type things we CONSTRUCT precisely (RpcCommand) so we can't build invalid
 // commands. We leave things we FORWARD loose (event payloads, response data,

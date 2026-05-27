@@ -8,6 +8,7 @@
 		"pi-rpc-bridge": "dist/index.js"
 	},
 	"scripts": {
+		"clean": "rm -rf dist",
 		"build": "tsc -p tsconfig.build.json",
 		"dev": "tsc -p tsconfig.build.json --watch",
 		"check": "tsc --noEmit",
@@ -17,7 +18,7 @@
 		"start": "npm run build --silent && node dist/index.js",
 		"ws-client": "npm run build --silent && node dist/ws-client.js",
 		"test-tier2": "tsx test/integration/tier2.ts",
-		"prepublishOnly": "npm run check && npm run build"
+		"prepublishOnly": "npm run clean && npm run check && npm run build"
 	},
 	"keywords": [
 		"pi",
@@ -48,17 +49,17 @@
 		"README.md"
 	],
 	"engines": {
-		"node": ">=20.6.0"
+		"node": ">=22.19.0"
 	},
 	"dependencies": {
-		"ws": "^8.18.0"
+		"ws": "8.21.0"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.0.0",
-		"@types/node": "^22.10.5",
-		"@types/ws": "^8.5.13",
-		"tsx": "^4.20.0",
-		"typescript": "^5.7.0",
-		"vitest": "^3.0.0"
+		"@biomejs/biome": "2.4.14",
+		"@types/node": "22.19.17",
+		"@types/ws": "8.18.1",
+		"tsx": "4.21.0",
+		"typescript": "5.9.3",
+		"vitest": "3.2.4"
 	}
 }

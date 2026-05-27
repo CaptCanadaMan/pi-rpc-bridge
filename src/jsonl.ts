@@ -1,9 +1,9 @@
 // Vendored verbatim from pi-mono.
-// Source: https://github.com/badlogic/pi-mono/blob/main/packages/coding-agent/src/modes/rpc/jsonl.ts
+// Source: https://github.com/earendil-works/pi-mono/blob/main/packages/coding-agent/src/modes/rpc/jsonl.ts
 // License: MIT (pi-mono)
 //
 // Vendored rather than depended-upon to keep the bridge's dependency tree
-// minimal — pulling in @mariozechner/pi-coding-agent for ~50 lines of helpers
+// minimal — pulling in @earendil-works/pi-coding-agent for ~50 lines of helpers
 // would drag the whole pi-mono ecosystem into our install.
 
 import type { Readable } from "node:stream";

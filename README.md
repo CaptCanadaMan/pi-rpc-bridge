@@ -1,6 +1,6 @@
 # pi-rpc-bridge
 
-HTTP + WebSocket bridge for [`pi --mode rpc`](https://github.com/badlogic/pi-mono). Drive a pi coding agent running on your homelab from any client that speaks HTTPS, over a network layer of your choice — Tailscale, Headscale, mTLS-direct, self-hosted WireGuard, or behind an enterprise reverse proxy.
+HTTP + WebSocket bridge for [`pi --mode rpc`](https://github.com/earendil-works/pi-mono). Drive a pi coding agent running on your homelab from any client that speaks HTTPS, over a network layer of your choice — Tailscale, Headscale, mTLS-direct, self-hosted WireGuard, or behind an enterprise reverse proxy.
 
 **Status:** v0 — functional and smoke-tested end-to-end. Not yet published to npm. Run from source for now.
 
@@ -17,7 +17,7 @@ Pi-mono's `--mode rpc` flag exposes the agent over JSON-lines on stdin/stdout, d
 
 - [ayagmar/pi-mobile](https://github.com/ayagmar/pi-mobile) — Node bridge + Android client, bundled together.
 - [pugliatechs/polpo](https://github.com/pugliatechs/polpo) — multi-agent dashboard supporting pi alongside Claude Code, Codex, Gemini, OpenCode, and Goose.
-- [badlogic/pi-mom](https://github.com/badlogic/pi-mono) (in-repo) and [earendil-works/pi-chat](https://github.com/earendil-works/pi-chat) — Slack / Discord / Telegram bots, linked from pi-mono's own README.
+- [earendil-works/pi-mono](https://github.com/earendil-works/pi-mono) (in-repo) and [earendil-works/pi-chat](https://github.com/earendil-works/pi-chat) — Slack / Discord / Telegram bots, linked from pi-mono's own README.
 
 pi-rpc-bridge fills a narrower niche, guided by three principles:
 
@@ -65,7 +65,7 @@ PI_RPC_BRIDGE_CWD=$HOME/code/your-project \
 node dist/index.js
 ```
 
-If pi isn't installed yet: `npm install -g @mariozechner/pi-coding-agent`, then set up a provider per the [pi-mono README](https://github.com/badlogic/pi-mono#quick-start).
+If pi isn't installed yet: `npm install -g @earendil-works/pi-coding-agent`, then set up a provider per the [pi-mono README](https://github.com/earendil-works/pi-mono#quick-start).
 
 You should see:
 ```
@@ -272,7 +272,7 @@ Bearer token at handshake via the `Sec-WebSocket-Protocol` header as `bearer.<to
 
 Multi-client fan-out: every authenticated client receives every event. For interactive extension UI requests (`confirm` / `select` / `input` / `editor`), the bridge accepts the **first** `extension_ui_response` arriving from any client and drops subsequent ones for the same id. Fire-and-forget UI events (`notify`, `setStatus`, etc.) are pure broadcast — clients render them however they want without responding.
 
-For protocol-level details, refer to [pi-mono's `rpc-types.ts`](https://github.com/badlogic/pi-mono/blob/main/packages/coding-agent/src/modes/rpc/rpc-types.ts) — the bridge is a faithful pass-through.
+For protocol-level details, refer to [pi-mono's `rpc-types.ts`](https://github.com/earendil-works/pi-mono/blob/main/packages/coding-agent/src/modes/rpc/rpc-types.ts) — the bridge is a faithful pass-through.
 
 ---
 
@@ -463,7 +463,7 @@ npm uninstall -g pi-rpc-bridge
 ### `pi: command not found` on bridge startup
 Pi isn't on `PATH` for the user running the bridge.
 - Verify: `which pi && pi --version`
-- Install if missing: `npm install -g @mariozechner/pi-coding-agent`
+- Install if missing: `npm install -g @earendil-works/pi-coding-agent`
 - Or set `PI_RPC_BRIDGE_PI_BIN=/full/path/to/pi` if pi is installed elsewhere
 
 ### `Bearer token must be at least 32 characters`
@@ -541,7 +541,7 @@ test/
 - Single runtime dependency: `ws`. Everything else is from `node:` built-ins.
 - Dev: Biome (formatter/linter), vitest (unit tests), tsx (run integration tests directly), typescript
 
-The bridge does not depend on `@mariozechner/pi-coding-agent` or any pi-mono package. Protocol types and the JSONL helper are vendored — see `src/types.ts` and `src/jsonl.ts`. This keeps the install footprint small and decouples release cadence from upstream.
+The bridge does not depend on `@earendil-works/pi-coding-agent` or any pi-mono package. Protocol types and the JSONL helper are vendored — see `src/types.ts` and `src/jsonl.ts`. This keeps the install footprint small and decouples release cadence from upstream.
 
 ---
 
@@ -561,15 +561,15 @@ These are deliberate omissions, not oversights. Each has a planned solution path
 
 ## Compatibility
 
-- Tested 2026-05-03 against pi-coding-agent installed via `npm install -g @mariozechner/pi-coding-agent`.
+- Tested 2026-05-03 against pi-coding-agent installed via `npm install -g @earendil-works/pi-coding-agent`.
 - Smoke-tested with the [pi-ollama](https://github.com/CaptCanadaMan/pi-ollama) provider extension and a `nemotron-cascade-2:30b` model.
-- Pi `--mode rpc` protocol is documented in [`rpc-types.ts`](https://github.com/badlogic/pi-mono/blob/main/packages/coding-agent/src/modes/rpc/rpc-types.ts) and [`docs/rpc.md`](https://github.com/badlogic/pi-mono/blob/main/packages/coding-agent/docs/rpc.md). The bridge tracks that protocol; if pi-mono ships a breaking change, this project's vendored types will need a corresponding update.
+- Pi `--mode rpc` protocol is documented in [`rpc-types.ts`](https://github.com/earendil-works/pi-mono/blob/main/packages/coding-agent/src/modes/rpc/rpc-types.ts) and [`docs/rpc.md`](https://github.com/earendil-works/pi-mono/blob/main/packages/coding-agent/docs/rpc.md). The bridge tracks that protocol; if pi-mono ships a breaking change, this project's vendored types will need a corresponding update.
 
 ---
 
 ## Contributing
 
-Issues and PRs welcome. Style matches pi-mono's `biome.json` (tabs width 3, line width 120) and `AGENTS.md` (no emojis, no `any` outside justified spots, no inline imports). See [pi-mono's contribution guidelines](https://github.com/badlogic/pi-mono/blob/main/CONTRIBUTING.md) for the broader ecosystem conventions.
+Issues and PRs welcome. Style matches pi-mono's `biome.json` (tabs width 3, line width 120) and `AGENTS.md` (no emojis, no `any` outside justified spots, no inline imports). See [pi-mono's contribution guidelines](https://github.com/earendil-works/pi-mono/blob/main/CONTRIBUTING.md) for the broader ecosystem conventions.
 
 ## License
 

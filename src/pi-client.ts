@@ -3,7 +3,7 @@
 // and supervises pi with crash-restart.
 //
 // This is a vendored, minimal subset of pi-mono's `rpc-client.ts`. We don't
-// depend on @mariozechner/pi-coding-agent because that package pulls in the
+// depend on @earendil-works/pi-coding-agent because that package pulls in the
 // whole pi-mono ecosystem (pi-agent-core, pi-ai, pi-tui, photon-node WASM)
 // which is wildly disproportionate to our needs.
 //
