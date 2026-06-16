@@ -114,6 +114,16 @@ export function optionalStringField(body: Record<string, unknown>, key: string):
 	return value;
 }
 
+/** Get an optional finite number field. */
+export function optionalNumberField(body: Record<string, unknown>, key: string): number | undefined {
+	const value = body[key];
+	if (value === undefined) return undefined;
+	if (typeof value !== "number" || !Number.isFinite(value)) {
+		throw new ValidationError(`field '${key}' must be a finite number if provided`);
+	}
+	return value;
+}
+
 /** Get a required boolean field. */
 export function requireBooleanField(body: Record<string, unknown>, key: string): boolean {
 	const value = body[key];

@@ -25,7 +25,7 @@ pi-rpc-bridge fills a narrower niche, guided by three principles:
 - **Choice.** Operator picks the transport (Tailscale / Headscale / mTLS-direct / self-hosted WireGuard / reverse-proxy). Consumer picks the frontend (this bridge ships nothing of the kind).
 - **Separation from client.** The bridge ships only the protocol — bearer-token auth, supervised pi child process, full bidirectional extension UI routing. iOS apps, web UIs, voice interfaces, automation pipelines, and chat bots are all separate projects, free to evolve independently.
 
-~1300 LOC, one runtime dependency (`ws`).
+~1600 LOC of source (plus ~550 LOC of tests), one runtime dependency (`ws`).
 
 ## What this is not
 

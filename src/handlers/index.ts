@@ -18,6 +18,7 @@ import type { ServerResponse } from "node:http";
 import type { PiClient } from "../pi-client.js";
 import {
 	asObject,
+	optionalNumberField,
 	optionalStringField,
 	readJsonBody,
 	requireBooleanField,
@@ -36,6 +37,16 @@ export interface HandlerDeps {
 type PromptCommand = Extract<RpcCommandBody, { type: "prompt" }>;
 type SteerCommand = Extract<RpcCommandBody, { type: "steer" }>;
 type FollowUpCommand = Extract<RpcCommandBody, { type: "follow_up" }>;
+
+// Bot-event delivery policy (#8). Urgent events (faults — low priority numbers)
+// preempt the running turn (steer); routine progress events (nav arrived /
+// blocked / recovered) queue after it (followUp). The threshold mirrors the
+// sandbox priority bands (fault=10, operator=20, nav=30) — see pi-bot events.py.
+const STEER_THRESHOLD = 20;
+
+export function behaviorForPriority(priority: number | undefined): "steer" | "followUp" {
+	return priority !== undefined && priority <= STEER_THRESHOLD ? "steer" : "followUp";
+}
 
 export function createRoutes(deps: HandlerDeps): Route[] {
 	const { piClient } = deps;
@@ -95,6 +106,23 @@ export function createRoutes(deps: HandlerDeps): Route[] {
 
 	const postAbort = withErrors(async (_req, res) => {
 		await execute(res, { type: "abort" });
+	});
+
+	// Bot-event injection (#8). The sandbox POSTs framed bot events here; we map
+	// the priority band to a pi delivery discipline (steer vs followUp) and inject
+	// as a prompt. A dedicated endpoint (vs /api/prompt) keeps bot-originated turns
+	// observable and gives a forward-compat seam for per-user routing. The message
+	// is already framed by the sandbox ("[bot event] ...") and forwarded as-is.
+	const postEvent = withErrors(async (req, res) => {
+		const body = asObject(await readJsonBody(req));
+		const message = requireStringField(body, "message");
+		const priority = optionalNumberField(body, "priority");
+		const command: PromptCommand = {
+			type: "prompt",
+			message,
+			streamingBehavior: behaviorForPriority(priority),
+		};
+		await execute(res, command);
 	});
 
 	// ========================================================================
@@ -303,6 +331,7 @@ export function createRoutes(deps: HandlerDeps): Route[] {
 		{ method: "POST", path: "/api/steer", handler: postSteer },
 		{ method: "POST", path: "/api/follow_up", handler: postFollowUp },
 		{ method: "POST", path: "/api/abort", handler: postAbort },
+		{ method: "POST", path: "/api/event", handler: postEvent },
 
 		// Session lifecycle
 		{ method: "POST", path: "/api/session/new", handler: postSessionNew },
